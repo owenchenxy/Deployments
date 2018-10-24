@@ -34,12 +34,12 @@ downloadAssets(){
             if [[ $QA_ASSETS_REVISION == \"$TARGET_ASSETS_REVISION\" ]]
             then
                 echo "\\033[0;33mCMD>>>aws s3 cp s3://bim360-dm-qa-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$QA_FRONT_PROFILE"
-                #aws s3 cp s3://bim360-dm-qa-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/ --profile=$QA_FRONT_PROFILE
+                aws s3 cp s3://bim360-dm-qa-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/ --profile=$QA_FRONT_PROFILE
                 [[ $? != 0 ]] && echo "\\033[0;31mERROR>>>Download Assets from QA Failed" && exit 1 || echo "\\033[0;32mSUCCESS>>>assets-$TARGET_ASSETS_REVISION.tar.gz downloaded from QA s3" 
             elif [[ $DEV_ASSETS_REVISION == $TARGET_ASSETS_REVISION ]]
             then
                 echo "\\033[0;33mCMD>>>aws s3 cp s3://bim360-dm-dev-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$DEV_FRONT_PROFILE"
-                #aws s3 cp s3://bim360-dm-dev-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$DEV_FRONT_PROFILE
+                aws s3 cp s3://bim360-dm-dev-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$DEV_FRONT_PROFILE
                 [[ $? != 0 ]] && echo "\\033[0;31mERROR>>>Download Assets from DEV Failed" && exit 1 || echo "\\033[0;32mSUCCESS>>>assets-$TARGET_ASSETS_REVISION.tar.gz downloaded from DEV s3"
             else
                 echo "\\033[0;31mERROR>>>Target Assets Revision is not found on DEV/QA" && exit 1
@@ -49,7 +49,7 @@ downloadAssets(){
             if [[ $STG_ASSETS_REVISION == $TARGET_ASSETS_REVISION ]]
             then
                 echo "\\033[0;33mCMD>>>aws s3 cp s3://bim360-dm-stg-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$STG_FRONT_PROFILE"
-                #aws s3 cp s3://bim360-dm-stg-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$STG_FRONT_PROFILE
+                aws s3 cp s3://bim360-dm-stg-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$STG_FRONT_PROFILE
                 [[ $? != 0 ]] && echo "\\033[0;31mERROR>>>Download Assets from Staging Failed" && exit 1 || echo "\\033[0;32mSUCCESS>>>assets-$TARGET_ASSETS_REVISION.tar.gz downloaded from Staging s3"
             fi
         ;;
@@ -57,7 +57,7 @@ downloadAssets(){
             if [[ $EU_STG_ASSETS_REVISION == $TARGET_ASSETS_REVISION ]]
             then
                 echo "\\033[0;33mCMD>>>aws s3 cp s3://bim360-dm-stg-eu-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$EU_STG_FRONT_PROFILE"
-                #aws s3 cp s3://bim360-dm-stg-eu-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$EU_STG_FRONT_PROFILE
+                aws s3 cp s3://bim360-dm-stg-eu-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$EU_STG_FRONT_PROFILE
                 [[ $? != 0 ]] && echo "\\033[0;31mERROR>>>Download Assets from EU Staging Failed" && exit 1 || echo "\\033[0;32mSUCCESS>>>assets-$TARGET_ASSETS_REVISION.tar.gz downloaded from EU Staging s3"
             fi
         ;;
@@ -66,9 +66,10 @@ downloadAssets(){
 } 
 #extract the Assets package to dist/ folder
 extractAssets(){
-    cd $FOLDER #&& tar -xvzf $FOLDER/assets-$TARGET_ASSETS_REVISION.tar.gz
-    [[ $? != 0 ]] && echo "Extract Assets Failed" && exit 1 || echo "\\033[0;32mSUCCESS>>>Successfully extracted assets files to $FOLDER/dist "
     echo "\\033[0;33mCMD>>>tar -xvzf $FOLDER/assets-$TARGET_ASSETS_REVISION.tar.gz"
+    cd $FOLDER && tar -xvzf $FOLDER/assets-$TARGET_ASSETS_REVISION.tar.gz
+    [[ $? != 0 ]] && echo "Extract Assets Failed" && exit 1 || echo "\\033[0;32mSUCCESS>>>Successfully extracted assets files to $FOLDER/dist "
+    
 }
 #sync upload the files in dist/ folder to s3
 syncAssetsToS3(){
@@ -91,12 +92,12 @@ syncAssetsToS3(){
         ;;
     esac
     echo "\\033[0;33mCMD>>>aws s3 sync $FOLDER/dist $S3_BUCKET --only-show-errors --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --profile $PROFILE"
-    #aws s3 sync $FOLDER/dist $S3_BUCKET --only-show-errors --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --profile $PROFILE
+    aws s3 sync $FOLDER/dist $S3_BUCKET --only-show-errors --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --profile $PROFILE
     if [[ $? != 0 ]]
     then
         echo "\\033[0;31mERROR>>>Failed Uploading Assets Files to S3 . Re-trying..."
         echo "\\033[0;33mCMD>>>aws s3 sync $FOLDER/dist $S3_BUCKET --only-show-errors --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --profile $PROFILE"
-        #aws s3 sync $FOLDER/dist $S3_BUCKET --only-show-errors --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --profile $PROFILE
+        aws s3 sync $FOLDER/dist $S3_BUCKET --only-show-errors --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --profile $PROFILE
         [[ $? != 0 ]] && echo "\\033[0;31mERROR>>>Failed Uploading Assets Files to S3. Exit..." && exit 1 || echo "\\033[0;33mCMD>>>Warning:Successfully Uploading Assets Files to S3 but on 2nd Try"
     else
         echo "\\033[0;32mSUCCESS>>>Successfully Uploading Assets Files to S3"
