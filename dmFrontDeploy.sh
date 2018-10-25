@@ -1,5 +1,4 @@
 #!/bin/bash
-ENV_PREFIX=/Users/chenxi/BIM360/env_shell/dm/
 FOLDER=~/tmp/assets
 QA_FRONT_PROFILE=dm-qa-front
 DEV_FRONT_PROFILE=dm-dev-front
@@ -10,14 +9,12 @@ EU_PROD_FRONT_PROFILE=dm-prod-eu-front
 
 echo "\\033[0;34mINPUT>>>Which Environment to be Deployed(stg/prod/eu-stg/eu-prod)?\c" && read
 ENV=$REPLY
-ENV_FILE=${ENV_PREFIX}${ENV}.sh
-[[ ! -f $ENV_FILE ]] && echo "\\033[0;31mERROR>>>Failed.Env shell script ${ENV_FILE} doesn't exist. Please check your input." && exit 1
 echo "\\033[0;34mINPUT>>>Please Specify Target Assets Revision:\c" && read
 TARGET_ASSETS_REVISION=$REPLY
 
-source $ENV_FILE
-[[ -d $FOLDER ]] && rm -rf $FOLDER
-mkdir -p $FOLDER
+[[ -d $FOLDER ]] || mkdir -p $FOLDER
+[[ -f $FOLDER/assets-$TARGET_ASSETS_REVISION.tar.gz ]] && SKIP_DOWNLOAD_ASSETS=1
+
 
 DEV_ASSETS_REVISION=$(curl -s https://docs.b360-dev.autodesk.com/health | jq .build.assets_revision)
 QA_ASSETS_REVISION=$(curl -s https://docs.b360-qa.autodesk.com/health | jq .build.assets_revision)
@@ -42,7 +39,10 @@ downloadAssets(){
                 aws s3 cp s3://bim360-dm-dev-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$DEV_FRONT_PROFILE
                 [[ $? != 0 ]] && echo "\\033[0;31mERROR>>>Download Assets from DEV Failed" && exit 1 || echo "\\033[0;32mSUCCESS>>>assets-$TARGET_ASSETS_REVISION.tar.gz downloaded from DEV s3"
             else
-                echo "\\033[0;31mERROR>>>Target Assets Revision is not found on DEV/QA" && exit 1
+                echo "\\033[0;33mCMD>>>aws s3 cp s3://bim360-dm-qa-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/  --profile=$QA_FRONT_PROFILE"
+                echo "\\033[0;33mWARNING>>>assets-$TARGET_ASSETS_REVISION is not Deployed to DEV or QA. Trying to Find in QA front s3..."
+                aws s3 cp s3://bim360-dm-qa-front/assets/assets-$TARGET_ASSETS_REVISION.tar.gz $FOLDER/ --profile=$QA_FRONT_PROFILE
+                [[ $? != 0 ]] && echo "\\033[0;31mERROR>>>Download Assets from QA Failed" && exit 1 || echo "\\033[0;32mSUCCESS>>>assets-$TARGET_ASSETS_REVISION.tar.gz downloaded from QA s3"
             fi
         ;;
         prod)
@@ -79,6 +79,7 @@ syncAssetsToS3(){
             PROFILE=$STG_FRONT_PROFILE    
         ;;        
         eu-stg)
+            echo "env is eu-stg"
             S3_BUCKET="s3://bim360-dm-stg-eu-front/assets"
             PROFILE=$EU_STG_FRONT_PROFILE
         ;;
@@ -98,7 +99,7 @@ syncAssetsToS3(){
         echo "\\033[0;31mERROR>>>Failed Uploading Assets Files to S3 . Re-trying..."
         echo "\\033[0;33mCMD>>>aws s3 sync $FOLDER/dist $S3_BUCKET --only-show-errors --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --profile $PROFILE"
         aws s3 sync $FOLDER/dist $S3_BUCKET --only-show-errors --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers --profile $PROFILE
-        [[ $? != 0 ]] && echo "\\033[0;31mERROR>>>Failed Uploading Assets Files to S3. Exit..." && exit 1 || echo "\\033[0;33mCMD>>>Warning:Successfully Uploading Assets Files to S3 but on 2nd Try"
+        [[ $? != 0 ]] && echo "\\033[0;31mERROR>>>Failed Uploading Assets Files to S3. Exit..." && exit 1 || echo "\\033[0;33mWARNING>>>Warning:Successfully Uploading Assets Files to S3 but on 2nd Try"
     else
         echo "\\033[0;32mSUCCESS>>>Successfully Uploading Assets Files to S3"
     fi
@@ -125,7 +126,7 @@ verifyAssets(){
 }
 
 
-downloadAssets $ENV
+[[ $SKIP_DOWNLOAD_ASSETS == 1 ]] && echo "Assets Files already fully retrived. Skip downloading"|| downloadAssets $ENV
 extractAssets
 syncAssetsToS3 $ENV
 verifyAssets $ENV
