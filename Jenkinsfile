@@ -18,7 +18,7 @@ node {
         }
         stage('Edit downloaded ENV file'){
             sh '''
-            
+            echo kfkoe
             '''
         }
         stage('Upload edited sec file to s3'){
