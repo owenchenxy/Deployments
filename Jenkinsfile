@@ -8,7 +8,7 @@ node {
         }
         stage('delete local sec file if existed'){
             sh '''
-              
+              echo haha
             '''
         }
         stage('Download secrets file from s3'){
