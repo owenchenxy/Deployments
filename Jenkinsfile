@@ -13,7 +13,7 @@ node {
         }
         stage('Download secrets file from s3'){
             sh '''
-           
+           echo cdfeff
             '''
         }
         stage('Edit downloaded ENV file'){
